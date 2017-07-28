@@ -1,67 +1,88 @@
-.SECTION "libgb"
+.include "libgb/memorymap.s"
+.include "libgb/variables.s"
+.include "libgb/defines.s"
 
-waitForVBlank:
-	ldh a,(R_LCDC)
-	and $80
-	ret z
--
-	halt
-	nop
-	ldh a,(hInterruptType)
-	cp INT_VBLANK
-	jr nz,-
-	ret
+.BANK 0
+
+.SECTION "libgb" FREE
 
 getInput:
 	push bc
 	push hl
 	ld hl,hButtonsPressed
 	ld a,%00100000 ; get dpad
-	ldh (R_P1),a
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
+	ldh [R_P1],a
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
 	xor $ff
 	and $0f
 	swap a
 	ld b,a
 
 	ld a,%00010000 ; get buttons
-	ldh (R_P1),a
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
-	ldh a,(R_P1)
+	ldh [R_P1],a
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
+	ldh a,[R_P1]
 	xor $ff
 	and $0f
 	or b
 
-	ld b,(hl)
-	ld (hl),a
+	ld b,[hl]
+	ld [hl],a
 	ld c,a
 	xor b
 	and c
-	ldh (<hButtonsJustPressed),a
+	ldh [<hButtonsJustPressed],a
 	ld a,c
 	xor b
 	and b
-	ldh (<hButtonsJustReleased),a
+	ldh [<hButtonsJustReleased],a
 
 	pop hl
 	pop bc
+	ret
+
+disableLcd:
+	; Check if already disabled
+	ldh a,[R_LCDC]
+	and $80
+	ret z
+
+	; Wait for vblank
+	di
+-
+	ldh a,[R_LY]
+	cp $90
+	jr nz,-
+
+	; Disable LCD
+	ldh a,[R_LCDC]
+	and $7f
+	ldh [R_LCDC],a
+
+	ei
+	ret
+
+enableLcd:
+	ldh a,[R_LCDC]
+	or $80
+	ldh [R_LCDC],a
 	ret
 
 multiplyBC:
@@ -87,29 +108,28 @@ multiplyBC:
 	pop de
 	ret
 
+jpbc:
+	ld h,b
+	ld l,c
+	jr jphl
+jpde:
+	ld h,d
+	ld l,e
 jphl:
 	jp hl
 
-; Clears wram and zero page.
-; Omits only $cf00-cfff, where the stack is assumed to be.
-clearWram:
-	push bc
-	push hl
-	ld hl,$c000
-	ld bc,$0f00
--
-	xor a
-	ldi (hl),a
-	dec bc
-	ld a,b
-	or c
-	jr nz,-
+; Clears wram and hram.
+; This will nuke the stack. It will return to the caller, but any pops or returns after
+; this will fail.
+clearMemory:
+	pop de ; Get return address (we're about to nuke the stack)
 
-	ld hl,$d000
-	ld bc,$1000
+	; Clear $c000-$dfff
+	ld hl,$c000
+	ld bc,$2000
 -
 	xor a
-	ldi (hl),a
+	ldi [hl],a
 	dec bc
 	ld a,b
 	or c
@@ -120,12 +140,14 @@ clearWram:
 	ld b,$7f
 	xor a
 -
-	ldi (hl),a
+	ldi [hl],a
 	dec b
 	jr nz,-
-	pop hl
-	pop bc
-	ret
+
+	; Return
+	ld h,d
+	ld l,e
+	jp hl
 
 ; Assumes lcd is off.
 clearVram:
@@ -135,7 +157,7 @@ clearVram:
 	ld bc,$2000
 -
 	xor a
-	ldi (hl),a
+	ldi [hl],a
 	dec bc
 	ld a,b
 	or c
@@ -145,22 +167,22 @@ clearVram:
 	ret
 
 ; Copies bc bytes from hl to de.
-copyData:
-	ldi a,(hl)
-	ld (de),a
+copyMemory:
+	ldi a,[hl]
+	ld [de],a
 	inc de
 	dec bc
 	ld a,b
 	or c
-	jr nz,copyData
+	jr nz,copyMemory
 	ret
 
 ; Fills bc bytes with value of a starting from hl.
-fillData:
+fillMemory:
 	push de
 	ld d,a
 -
-	ld (hl),d
+	ld [hl],d
 	inc hl
 	dec bc
 	ld a,b
@@ -170,35 +192,35 @@ fillData:
 	ret
 
 setCpuSpeed_1x:
-	ldh a, (R_KEY1)
+	ldh a, [R_KEY1]
 	rlca
 	ret nc 	 ;mode was already 1x.
 	jr +
 
 setCpuSpeed_2x:
-	ldh a,(R_KEY1)
+	ldh a,[R_KEY1]
 	rlca
 	ret c 	 ;mode was already 2x.
 
 +
 	di
 
-	ldh a,(R_IE)
+	ldh a,[R_IE]
 	push af
 
 	xor a
-	ldh (R_IE),a
-	ldh (R_IF),a
+	ldh [R_IE],a
+	ldh [R_IF],a
 	ld a,$30
-	ldh (R_P1),a
+	ldh [R_P1],a
 	ld a,%00000001
-	ldh (R_KEY1),a
+	ldh [R_KEY1],a
 
 	stop
 	nop
 
 	pop af
-	ldh (R_IE),a
+	ldh [R_IE],a
 
 	ei
 	ret
@@ -210,24 +232,24 @@ loadBgPalettes:
 
 -
 	ld a, b
-	ldh ($68), a 	;$68 = bcps.
+	ldh [$68], a 	;$68 = bcps.
 
-	ldi a, (hl)
-	ldh ($69), a 	;$69 = bcpd.
-	ldi a, (hl)
-	ldh ($69), a
-	ldi a, (hl)
-	ldh ($69), a
-	ldi a, (hl)
-	ldh ($69), a
-	ldi a, (hl)
-	ldh ($69), a
-	ldi a, (hl)
-	ldh ($69), a
-	ldi a, (hl)
-	ldh ($69), a
-	ldi a, (hl)
-	ldh ($69), a
+	ldi a, [hl]
+	ldh [$69], a 	;$69 = bcpd.
+	ldi a, [hl]
+	ldh [$69], a
+	ldi a, [hl]
+	ldh [$69], a
+	ldi a, [hl]
+	ldh [$69], a
+	ldi a, [hl]
+	ldh [$69], a
+	ldi a, [hl]
+	ldh [$69], a
+	ldi a, [hl]
+	ldh [$69], a
+	ldi a, [hl]
+	ldh [$69], a
 
 	ld a, b
 	add %00001000 	;next palette.
@@ -238,30 +260,30 @@ loadBgPalettes:
 
 
 ; hl = input data (8x4x2 bytes)
-loadSprPalettes:
+loadObjPalettes:
 	ld b, %10000000
 	ld c, 8
 
 -
 	ld a, b
-	ldh ($6A), a 	;$6A = ocps.
+	ldh [$6A], a 	;$6A = ocps.
 
-	ldi a, (hl)
-	ldh ($6B), a 	;$6B = ocpd.
-	ldi a, (hl)
-	ldh ($6B), a
-	ldi a, (hl)
-	ldh ($6B), a
-	ldi a, (hl)
-	ldh ($6B), a
-	ldi a, (hl)
-	ldh ($6B), a
-	ldi a, (hl)
-	ldh ($6B), a
-	ldi a, (hl)
-	ldh ($6B), a
-	ldi a, (hl)
-	ldh ($6B), a
+	ldi a, [hl]
+	ldh [$6B], a 	;$6B = ocpd.
+	ldi a, [hl]
+	ldh [$6B], a
+	ldi a, [hl]
+	ldh [$6B], a
+	ldi a, [hl]
+	ldh [$6B], a
+	ldi a, [hl]
+	ldh [$6B], a
+	ldi a, [hl]
+	ldh [$6B], a
+	ldi a, [hl]
+	ldh [$6B], a
+	ldi a, [hl]
+	ldh [$6B], a
 
 	ld a, b
 	add %00001000 	;next palette.

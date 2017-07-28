@@ -1,17 +1,5 @@
-.DEFINE WRAM_FREESPACE_START $c000
-.DEFINE HRAM_FREESPACE_START $ff80 
-
-.MACRO db_hram
-	.DEFINE \1 HRAM_FREESPACE_START
-	.REDEFINE HRAM_FREESPACE_START HRAM_FREESPACE_START+1
-.ENDM
-.MACRO db_wram
-	.DEFINE \1 WRAM_FREESPACE_START
-	.REDEFINE WRAM_FREESPACE_START WRAM_FREESPACE_START+1
-.ENDM
-
-
-	db_hram		hButtonsPressed
-	db_hram		hButtonsJustPressed
-	db_hram		hButtonsJustReleased
-	db_hram		hInterruptType
+.RAMSECTION "libgb_hram" SLOT 4
+	hButtonsPressed:	db
+	hButtonsJustPressed:	db
+	hButtonsJustReleased:	db
+.ENDS
