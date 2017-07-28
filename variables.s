@@ -3,7 +3,6 @@
 
 .MACRO db_hram
 	.DEFINE \1 HRAM_FREESPACE_START
-	.DEFINE z_\1 HRAM_FREESPACE_START&$ff
 	.REDEFINE HRAM_FREESPACE_START HRAM_FREESPACE_START+1
 .ENDM
 .MACRO db_wram
@@ -11,7 +10,8 @@
 	.REDEFINE WRAM_FREESPACE_START WRAM_FREESPACE_START+1
 .ENDM
 
-	db_hram		buttonsPressed
-	db_hram		buttonsJustPressed
-	db_hram		buttonsJustReleased
-	db_hram		interruptType
+
+	db_hram		hButtonsPressed
+	db_hram		hButtonsJustPressed
+	db_hram		hButtonsJustReleased
+	db_hram		hInterruptType

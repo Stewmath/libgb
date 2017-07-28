@@ -1,6 +1,5 @@
-;.SECTION "libgb"
+.SECTION "libgb"
 
-; Use this if the cartridge stays in
 waitForVBlank:
 	ldh a,(R_LCDC)
 	and $80
@@ -8,28 +7,15 @@ waitForVBlank:
 -
 	halt
 	nop
-	ldh a,(z_interruptType)
+	ldh a,(hInterruptType)
 	cp INT_VBLANK
 	jr nz,-
 	ret
 
-; Use this if the cartridge may be hotswapped
-/*
-waitForVBlank:
-	ldh a,(R_LCDC)
-	and $80
-	ret z
--
-	ldh a, [R_LY]
-	cp 144
-	jr nz, -
-	ret
-*/
-
 getInput:
 	push bc
 	push hl
-	ld hl,buttonsPressed
+	ld hl,hButtonsPressed
 	ld a,%00100000 ; get dpad
 	ldh (R_P1),a
 	ldh a,(R_P1)
@@ -68,20 +54,20 @@ getInput:
 	ld c,a
 	xor b
 	and c
-	ldh (z_buttonsJustPressed),a
+	ldh (<hButtonsJustPressed),a
 	ld a,c
 	xor b
 	and b
-	ldh (z_buttonsJustReleased),a
+	ldh (<hButtonsJustReleased),a
 
 	pop hl
 	pop bc
 	ret
 
-multiply:
+multiplyBC:
 ; ========================================================
 ; Parameters:	B, C = numbers to multiply
-; Returns:		hl = product
+; Returns:	hl = product
 ; ========================================================
 	push de
 	ld hl, 0
@@ -148,12 +134,12 @@ clearVram:
 	ld hl,$8000
 	ld bc,$2000
 -
-	xor	a
-	ldi	(hl),a
-	dec	bc
-	ld	a,b
-	or	c
-	jr	nz,-
+	xor a
+	ldi (hl),a
+	dec bc
+	ld a,b
+	or c
+	jr nz,-
 	pop hl
 	pop bc
 	ret
@@ -163,10 +149,10 @@ copyData:
 	ldi a,(hl)
 	ld (de),a
 	inc de
-	dec	bc
+	dec bc
 	ld a,b
 	or c
-	jr	nz,copyData
+	jr nz,copyData
 	ret
 
 ; Fills bc bytes with value of a starting from hl.
@@ -184,101 +170,104 @@ fillData:
 	ret
 
 setCpuSpeed_1x:
-	ldh	a, (R_KEY1)
+	ldh a, (R_KEY1)
 	rlca
-	ret	nc			;mode was already 1x.
+	ret nc 	 ;mode was already 1x.
 	jr +
 
 setCpuSpeed_2x:
-	ldh	a,(R_KEY1)
+	ldh a,(R_KEY1)
 	rlca
-	ret	c			;mode was already 2x.
+	ret c 	 ;mode was already 2x.
 
-+	di
++
+	di
 
-	ldh	a,(R_IE)
+	ldh a,(R_IE)
 	push af
 
-	xor	a
-	ldh	(R_IE),a
-	ldh	(R_IF),a
-	ld	a,$30
-	ldh	(R_P1),a
-	ld	a,%00000001
-	ldh	(R_KEY1),a
+	xor a
+	ldh (R_IE),a
+	ldh (R_IF),a
+	ld a,$30
+	ldh (R_P1),a
+	ld a,%00000001
+	ldh (R_KEY1),a
 
 	stop
 	nop
 
-	pop	af
-	ldh	(R_IE),a
+	pop af
+	ldh (R_IE),a
 
 	ei
 	ret
 
 ; hl = input data (8x4x2 bytes)
 loadBgPalettes:
-	ld	b, %10000000
-	ld	c, 8
+	ld b, %10000000
+	ld c, 8
 
--	ld	a, b
-	ldh	($68), a		;$68 = bcps.
+-
+	ld a, b
+	ldh ($68), a 	;$68 = bcps.
 
-	ldi	a, (hl)
-	ldh	($69), a		;$69 = bcpd.
-	ldi	a, (hl)
-	ldh	($69), a
-	ldi	a, (hl)
-	ldh	($69), a
-	ldi	a, (hl)
-	ldh	($69), a
-	ldi	a, (hl)
-	ldh	($69), a
-	ldi	a, (hl)
-	ldh	($69), a
-	ldi	a, (hl)
-	ldh	($69), a
-	ldi	a, (hl)
-	ldh	($69), a
+	ldi a, (hl)
+	ldh ($69), a 	;$69 = bcpd.
+	ldi a, (hl)
+	ldh ($69), a
+	ldi a, (hl)
+	ldh ($69), a
+	ldi a, (hl)
+	ldh ($69), a
+	ldi a, (hl)
+	ldh ($69), a
+	ldi a, (hl)
+	ldh ($69), a
+	ldi a, (hl)
+	ldh ($69), a
+	ldi a, (hl)
+	ldh ($69), a
 
-	ld	a, b
-	add	%00001000		;next palette.
-	ld	b, a
-	dec	c
-	jr	nz, -
+	ld a, b
+	add %00001000 	;next palette.
+	ld b, a
+	dec c
+	jr nz, -
 	ret
 
 
 ; hl = input data (8x4x2 bytes)
 loadSprPalettes:
-	ld	b, %10000000
-	ld	c, 8
+	ld b, %10000000
+	ld c, 8
 
--	ld	a, b
-	ldh	($6A), a		;$6A = ocps.
+-
+	ld a, b
+	ldh ($6A), a 	;$6A = ocps.
 
-	ldi	a, (hl)
-	ldh	($6B), a		;$6B = ocpd.
-	ldi	a, (hl)
-	ldh	($6B), a
-	ldi	a, (hl)
-	ldh	($6B), a
-	ldi	a, (hl)
-	ldh	($6B), a
-	ldi	a, (hl)
-	ldh	($6B), a
-	ldi	a, (hl)
-	ldh	($6B), a
-	ldi	a, (hl)
-	ldh	($6B), a
-	ldi	a, (hl)
-	ldh	($6B), a
+	ldi a, (hl)
+	ldh ($6B), a 	;$6B = ocpd.
+	ldi a, (hl)
+	ldh ($6B), a
+	ldi a, (hl)
+	ldh ($6B), a
+	ldi a, (hl)
+	ldh ($6B), a
+	ldi a, (hl)
+	ldh ($6B), a
+	ldi a, (hl)
+	ldh ($6B), a
+	ldi a, (hl)
+	ldh ($6B), a
+	ldi a, (hl)
+	ldh ($6B), a
 
-	ld	a, b
-	add	%00001000		;next palette.
-	ld	b, a
-	dec	c
-	jr	nz, -
+	ld a, b
+	add %00001000 	;next palette.
+	ld b, a
+	dec c
+	jr nz, -
 	ret
 
-;.ENDS
+.ENDS
