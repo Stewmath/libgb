@@ -1,12 +1,13 @@
 .include "libgb/memorymap.s"
 .include "libgb/variables.s"
 .include "libgb/defines.s"
+.include "libgb/macros.s"
 
 .BANK 0
 
 .SECTION "libgb" FREE
 
-getInput:
+readInput:
 	push bc
 	push hl
 	ld hl,hButtonsPressed
@@ -54,6 +55,28 @@ getInput:
 	and b
 	ldh [<hButtonsJustReleased],a
 
+	; Calculate autofire
+
+	xor a
+	ldh [<hButtonsPressedAutofire],a
+
+	ld hl,hAutofireCounter
+	ldh a,[<hButtonsJustPressed]
+	or a
+	jr z,+
+	; Reset autofire
+	ld a,AUTOFIRE_START_DELAY
+	ld [hl],a
+	ldh a,[<hButtonsJustPressed]
+	ldh [<hButtonsPressedAutofire],a
++
+	dec [hl]
+	jr nz,+
+	ld a,AUTOFIRE_INTERVAL
+	ld [hl],a
+	ldh a,[<hButtonsPressed]
+	ldh [<hButtonsPressedAutofire],a
++
 	pop hl
 	pop bc
 	ret
@@ -84,39 +107,6 @@ enableLcd:
 	or $80
 	ldh [R_LCDC],a
 	ret
-
-multiplyBC:
-; ========================================================
-; Parameters:	B, C = numbers to multiply
-; Returns:	hl = product
-; ========================================================
-	push de
-	ld hl, 0
-	ld a, b
-	or a
-	jr z, +
-	ld a, c
-	or a
-	jr z, +
-	ld d, 0
-	ld e, c
--
-	add hl, de
-	dec b
-	jr nz, -
-+
-	pop de
-	ret
-
-jpbc:
-	ld h,b
-	ld l,c
-	jr jphl
-jpde:
-	ld h,d
-	ld l,e
-jphl:
-	jp hl
 
 ; Clears wram and hram.
 ; This will nuke the stack. It will return to the caller, but any pops or returns after
@@ -190,6 +180,16 @@ fillMemory:
 	jr nz,-
 	pop de
 	ret
+
+jpbc:
+	ld h,b
+	ld l,c
+	jr jphl
+jpde:
+	ld h,d
+	ld l,e
+jphl:
+	jp hl
 
 setCpuSpeed_1x:
 	ldh a, [R_KEY1]
@@ -291,5 +291,7 @@ loadObjPalettes:
 	dec c
 	jr nz, -
 	ret
+
+.include "libgb/math.s"
 
 .ENDS

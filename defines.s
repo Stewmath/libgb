@@ -1,3 +1,12 @@
+; User may define these
+.ifndef AUTOFIRE_START_DELAY
+.define AUTOFIRE_START_DELAY 18
+.endif
+.ifndef AUTOFIRE_INTERVAL
+.define AUTOFIRE_INTERVAL 5
+.endif
+
+
 ; Buttons
 .DEFINE BTN_DOWN	$80	
 .DEFINE BTN_UP		$40
