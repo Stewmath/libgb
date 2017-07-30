@@ -181,6 +181,36 @@ fillMemory:
 	pop de
 	ret
 
+fillMemory16:
+; =======================================================================================
+; Fills a multiple of 16 bytes of memory. Much faster than "fillMemory".
+; Parameters: b = number of 16-byte blocks to copy
+;             a = value to fill
+;             hl = destination
+; =======================================================================================
+.rept 16
+	ldi [hl],a
+.endr
+	dec b
+	jr nz,fillMemory16
+	ret
+
+copyMemory16:
+; =======================================================================================
+; Copies a multiple of 16 bytes of memory. Much faster than "copyMemory".
+; Parameters: b = number of 16-byte blocks to copy
+;             hl = source
+;             de = destination
+; =======================================================================================
+.rept 16
+	ldi a,[hl]
+	ld [de],a
+	inc de
+.endr
+	dec b
+	jr nz,copyMemory16
+	ret
+
 jpbc:
 	ld h,b
 	ld l,c

@@ -111,6 +111,31 @@ divideBCByA:
 	ret
 
 
+hexToBcd:
+; =======================================================================================
+; Converts a normal number into a bcd (binary-coded decimal) number.
+; Parameters: a = hexnumber to convert
+; Returns:    bc = corresponding BCD number
+; =======================================================================================
+	ld bc,0
+-
+	cp 100
+	jr c,@tens
+	inc b
+	sub 100
+	jr -
+@tens
+	cp 10
+	jr c,@ones
+	inc c
+	sub 10
+	jr @tens
+@ones
+	swap c
+	add c
+	ld c,a
+	ret
+
 subAFromHL:
 	cpl
 	inc a

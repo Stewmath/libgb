@@ -1,11 +1,11 @@
 .MACRO ldbc
-	ld bc, ((\1)<<8) | (\2)
+	ld bc, ((\1)<<8) | (\2&$ff)
 .ENDM
 .MACRO ldde
-	ld de, ((\1)<<8) | (\2)
+	ld de, ((\1)<<8) | (\2&$ff)
 .ENDM
 .MACRO ldhl
-	ld hl, ((\1)<<8) | (\2)
+	ld hl, ((\1)<<8) | (\2&$ff)
 .ENDM
 
 .MACRO RGB16
